@@ -18,6 +18,6 @@ Generate code for a Go project.
 
 Options:
  - cli:  which command line flags interpreter to use
-   - Supports:  none, urfave, go-flags
+   - Future:  none, urfave, go-flags
  - makefile: a list of what to put into the Makefile
-   - Supports:  go-lint, go-mocks
+   - Future:  go-lint, go-mocks
