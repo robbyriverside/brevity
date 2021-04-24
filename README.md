@@ -1,8 +1,6 @@
 # NoCode
 
-Better than NoSQL !!
-
-Generate code instead of hand coding.
+Generate Go code instead of hand coding.
 
 Write layered specifications and compose a project in phases.
 
