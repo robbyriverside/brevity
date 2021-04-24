@@ -4,7 +4,7 @@ Better than NoSQL !!
 
 Generate code instead of hand coding.
 
-Write a layered specification.  Compose a project in phases.
+Write a layered specifications and compose a project in phases.
 
 Each new phase integrates with the existing code.
 
