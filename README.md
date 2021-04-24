@@ -1,9 +1,14 @@
 # NoCode
 
-generate code instead of writing
+Better than NoSQL !!
 
-Better than NoSQL.
+Generate code instead of hand coding.
 
+Write a layered specification.  Compose a project in phases.
+
+Each new phase integrates with the existing code.
+
+The generated source is readable and flexible for custom edits.
 
 # Generators
 
@@ -14,5 +19,5 @@ Generate code for a Go project.
 Options:
  - cli:  which command line flags interpreter to use
    - Supports:  none, urfave, go-flags
- - makefile:  what to put into the Makefile
+ - makefile: a list of what to put into the Makefile
    - Supports:  go-lint, go-mocks
