@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/robbyriverside/nocode"
+	"github.com/robbyriverside/nocode/internal/nocode"
 	"github.com/robbyriverside/nocode/project"
 
 	"github.com/jessevdk/go-flags"

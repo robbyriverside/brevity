@@ -14,7 +14,7 @@ type Command struct {
 
 // Execute the project command
 func (cmd *Command) Execute(args []string) error {
-	return MustRead(cmd.Args.SpecFile).Generate(cmd.Args.Destination)
+	return Read(cmd.Args.SpecFile).Generate(cmd.Args.Destination)
 }
 
 // AddCommand to the parser

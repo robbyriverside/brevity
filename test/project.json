@@ -1,8 +1,6 @@
 {
     "name": "first",
-    "cli": "none",
-    "makefile": [
-        "go-lint",
-        "go-mocks"
-    ]
+    "cli": "go-flags",
+    "api": "gin",
+    "mocks": "go-mocks"
 }

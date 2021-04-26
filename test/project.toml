@@ -1,2 +1,4 @@
 name = "first"
 cli = "urfave"
+api = "gin"
+mocks = "go-mocks"

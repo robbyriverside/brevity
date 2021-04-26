@@ -2,31 +2,60 @@ package project
 
 import (
 	"fmt"
-	"log"
 	"path/filepath"
 
-	"github.com/robbyriverside/nocode"
+	"github.com/robbyriverside/nocode/internal/nocode"
 )
+
+const (
+	NameFeature = "name"
+	CLIFeature  = "cli"
+	APIFeature  = "api"
+	MockFeature = "mocks"
+)
+
+// ActionFn project generation action
+type ActionFn func(project, feature, option string) error
+
+// Features for the project
+type Features map[string]string
 
 // Project to be generated
 type Project struct {
-	Name     string   `json:"name"`
-	CLI      string   `json:"cli"`
-	Makefile []string `json:"makefile"`
+	err      error
+	features Features
 }
 
-// MustRead project from specfile and exit on error
-func MustRead(specfile string) *Project {
+// Error found in the project
+func (p *Project) Error() error {
+	return p.err
+}
+
+// Stop the project by adding an error
+func (p *Project) Stop(err error) *Project {
+	p.err = err
+	return p
+}
+
+func (p *Project) String() string {
+	return fmt.Sprint(p.features)
+}
+
+// Read project from specfile
+func Read(specfile string) *Project {
 	var proj Project
-	err := nocode.Read(specfile, &proj)
+	err := nocode.Read(specfile, &proj.features)
 	if err != nil {
-		log.Fatal(err)
+		proj.err = err
 	}
 	return &proj
 }
 
 // Generate a project into a destination folder
 func (p *Project) Generate(dest string) error {
+	if p.Error() != nil {
+		return p.Error()
+	}
 	path, err := filepath.Abs(dest)
 	if err != nil {
 		return fmt.Errorf("expanding destination %s failed: %s", dest, err)
@@ -35,8 +64,7 @@ func (p *Project) Generate(dest string) error {
 		return err
 	}
 
-	fmt.Println("generate", p.Name, "with", p.CLI, "to", path)
-	fmt.Println(*p)
+	fmt.Println("generate:", path, p.features)
 
-	return nil
+	return p.folders().makefile().docker().Error()
 }

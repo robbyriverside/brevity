@@ -15,7 +15,10 @@ The generated source is readable and flexible for custom edits.
 Generate code for a Go project.
 
 Options:
- - cli:  which command line flags interpreter to use
-   - Future:  none, urfave, go-flags
- - makefile: a list of what to put into the Makefile
-   - Future:  go-lint, go-mocks
+ - cli:  which command line flags interpreter to install
+   - Future:  urfave, go-flags
+ - api: which web api package to install
+   - Future:  gin, protobuf
+ - mocks: which mock generator to install
+   - Future:  go-mocks
+   - 
