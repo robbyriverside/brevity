@@ -1,6 +1,7 @@
 package project
 
 import (
+	"embed"
 	"fmt"
 	"path/filepath"
 
@@ -13,6 +14,9 @@ const (
 	APIFeature  = "api"
 	MockFeature = "mocks"
 )
+
+//go:embed templates
+var templates embed.FS
 
 // ActionFn project generation action
 type ActionFn func(project, feature, option string) error

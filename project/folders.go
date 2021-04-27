@@ -1,9 +1,12 @@
 package project
 
 import (
+	_ "embed"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"text/template"
 )
 
 func (p *Project) folders() *Project {
@@ -40,13 +43,49 @@ func makeFolder(names ...string) error {
 	return os.MkdirAll(filepath.Join(names...), os.ModePerm)
 }
 
+const (
+	rootTemplate = "templates"
+)
+
+var (
+	folderTemplates = map[string]*template.Template{}
+)
+
+// FolderTemplates created lazy by reading embed filesystem
+func FolderTemplates(name string) (tmpl *template.Template, err error) {
+	tmpl, ok := folderTemplates[name]
+	if !ok {
+		tmpl, err = template.ParseFS(templates, filepath.Join(rootTemplate, name, "*.tmpl"))
+		if err == nil {
+			folderTemplates[name] = tmpl
+		}
+	}
+	return
+}
+
 var folderActions = map[string]ActionFn{
-	"cli": func(project, feature, option string) error {
+	"cli": func(project, feature, option string) (err error) {
 		if err := makeFolder(project, "cmd", project); err != nil {
 			return err
 		}
-		// TODO: use template to generate main.go file
-		// ??? use mustache ???  or text/template
+
+		tmpl, err := FolderTemplates(feature)
+		if err != nil {
+			return
+		}
+		main, err := os.Create(filepath.Join(project, "cmd", project, "main.go"))
+		if err != nil {
+			return fmt.Errorf("failed creating main.go: %s", err)
+		}
+		defer main.Close()
+		data := struct {
+			Name string
+		}{
+			Name: project,
+		}
+		if err = tmpl.ExecuteTemplate(main, "go-flags", &data); err != nil {
+			return fmt.Errorf("cli template failed: %s", err)
+		}
 		return nil
 	},
 }

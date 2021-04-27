@@ -1,0 +1,31 @@
+{{define "go-flags"}}
+package main
+
+import (
+	"log"
+
+	"github.com/jessevdk/go-flags"
+)
+
+type options struct {
+	Verbose bool `short:"v" long:"verbose" description:"verbose output"`
+}
+
+var (
+    Options = &options{}
+    parser = flags.NewParser(Options, flags.Default)
+)
+
+func main() {
+	parser.Name = "{{.Name}}"
+
+	// TO DO: load parser commands here
+
+	if _, err := parser.Parse(); err != nil {
+		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
+			return
+		}
+		log.Fatal(err)
+	}
+}
+{{end}}

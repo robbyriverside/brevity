@@ -1,4 +1,4 @@
 name = "first"
-cli = "urfave"
+cli = "go-flags"
 api = "gin"
 mocks = "go-mocks"
