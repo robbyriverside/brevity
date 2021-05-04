@@ -4,6 +4,8 @@ package main
 import (
 	"log"
 
+	{{range .Packages}}{{printf "github.com/robbyriverside/first/internal/%s" . | printf "%q\n\t"}}{{end}}
+
 	"github.com/jessevdk/go-flags"
 )
 
@@ -19,7 +21,9 @@ var (
 func main() {
 	parser.Name = "{{.Name}}"
 
-	// TO DO: load parser commands here
+	// TO DO: load parser commands
+	// {{.Name}}.AddCommands(parser)
+	{{range $pkg := .Packages}} {{printf "%s.AddCommand(parser)\n\t" $pkg}}{{end}}
 
 	if _, err := parser.Parse(); err != nil {
 		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {

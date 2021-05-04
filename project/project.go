@@ -18,6 +18,19 @@ const (
 //go:embed templates
 var templates embed.FS
 
+// Dir of embedded templates
+func Dir(dir string) (res []string, err error) {
+	res = []string{}
+	entries, err := templates.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	for _, entry := range entries {
+		res = append(res, entry.Name())
+	}
+	return
+}
+
 // ActionFn project generation action
 type ActionFn func(project, feature, option string) error
 

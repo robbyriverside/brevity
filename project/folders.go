@@ -1,7 +1,6 @@
 package project
 
 import (
-	_ "embed"
 	"errors"
 	"fmt"
 	"os"
@@ -79,12 +78,14 @@ var folderActions = map[string]ActionFn{
 		}
 		defer main.Close()
 		data := struct {
-			Name string
+			Name     string
+			Packages []string
 		}{
-			Name: project,
+			Name:     project,
+			Packages: []string{"one", "two", "three"},
 		}
-		if err = tmpl.ExecuteTemplate(main, "go-flags", &data); err != nil {
-			return fmt.Errorf("cli template failed: %s", err)
+		if err = tmpl.ExecuteTemplate(main, option, &data); err != nil {
+			return fmt.Errorf("cli template %s failed: %s", option, err)
 		}
 		return nil
 	},
