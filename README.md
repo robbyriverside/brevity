@@ -1,6 +1,6 @@
-# NoCode
+# Brevity
 
-Generate Go code instead of hand coding.
+App Meta-Generator.
 
 Write layered specifications and compose a project in phases.
 
