@@ -3,14 +3,14 @@ package main
 import (
 	"log"
 
-	"github.com/robbyriverside/nocode/internal/nocode"
-	"github.com/robbyriverside/nocode/project"
+	"github.com/robbyriverside/brevity/internal/brevity"
+	"github.com/robbyriverside/brevity/project"
 
 	"github.com/jessevdk/go-flags"
 )
 
 func main() {
-	parser := flags.NewParser(nocode.Options, flags.Default)
+	parser := flags.NewParser(brevity.Options, flags.Default)
 	parser.Name = "nocode"
 
 	if err := project.AddCommand(parser); err != nil {

@@ -1,4 +1,4 @@
-package nocode
+package brevity
 
 import (
 	"encoding/json"

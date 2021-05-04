@@ -1,4 +1,4 @@
-module github.com/robbyriverside/nocode
+module github.com/robbyriverside/brevity
 
 go 1.16
 

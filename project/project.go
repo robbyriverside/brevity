@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/robbyriverside/nocode/internal/nocode"
+	"github.com/robbyriverside/brevity/internal/brevity"
 )
 
 const (
@@ -61,7 +61,7 @@ func (p *Project) String() string {
 // Read project from specfile
 func Read(specfile string) *Project {
 	var proj Project
-	err := nocode.Read(specfile, &proj.features)
+	err := brevity.Read(specfile, &proj.features)
 	if err != nil {
 		proj.err = err
 	}
@@ -77,7 +77,7 @@ func (p *Project) Generate(dest string) error {
 	if err != nil {
 		return fmt.Errorf("expanding destination %s failed: %s", dest, err)
 	}
-	if err := nocode.ValidateFolder(path); err != nil {
+	if err := brevity.ValidateFolder(path); err != nil {
 		return err
 	}
 
