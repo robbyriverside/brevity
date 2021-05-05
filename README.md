@@ -10,6 +10,10 @@ The generated source is readable and flexible for custom edits.
 
 # Generators
 
+These are the code generators configured using brief language.  
+
+In future, there will be a meta-generator that uses a meta-level (also brief) specification that generates the config for the code generators.
+
 ## Project
 
 Generate code for a Go project.
