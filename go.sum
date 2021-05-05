@@ -1,4 +1,6 @@
 github.com/jessevdk/go-flags v1.5.0 h1:1jKYvbxEjfUl0fmqTCOfonvskHHXMjBySTLW4y9LFvc=
 github.com/jessevdk/go-flags v1.5.0/go.mod h1:Fw0T6WPc1dYxT4mKEZRfG5kJhaTDP9pj1c2EWnYs/m4=
+github.com/robbyriverside/brief v0.0.0-20210505014934-d725a63943dc h1:PaDLT8YOcJgbyBMeaq9tWuAwN2Hbn4E6ANvqtg0Ke0A=
+github.com/robbyriverside/brief v0.0.0-20210505014934-d725a63943dc/go.mod h1:/jiPXN8k6GKFHZhJ8GGlHCu08xUTmn3Sv0X8riyxA5g=
 golang.org/x/sys v0.0.0-20210320140829-1e4c9ba3b0c4 h1:EZ2mChiOa8udjfp6rRmswTbtZN/QzUQp4ptM4rnjHvc=
 golang.org/x/sys v0.0.0-20210320140829-1e4c9ba3b0c4/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
