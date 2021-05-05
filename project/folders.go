@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"text/template"
+
+	"github.com/robbyriverside/brief"
 )
 
 func (p *Project) folders() *Project {
@@ -14,16 +16,13 @@ func (p *Project) folders() *Project {
 	}
 
 	var found bool
-	name, ok := p.features[NameFeature]
-	if !ok {
+	name := p.features.Name
+	if len(name) == 0 {
 		return p.Stop(errors.New("required feature: name, not found"))
 	}
-	for key, option := range p.features {
-		if key == NameFeature {
-			continue
-		}
-		if action, ok := folderActions[key]; ok {
-			if err := action(name, key, option); err != nil {
+	for _, option := range p.features.Body {
+		if action, ok := folderActions[option.Type]; ok {
+			if err := action(name, option); err != nil {
 				return p.Stop(err)
 			}
 			found = true
@@ -63,12 +62,12 @@ func FolderTemplates(name string) (tmpl *template.Template, err error) {
 }
 
 var folderActions = map[string]ActionFn{
-	"cli": func(project, feature, option string) (err error) {
+	"cli": func(project string, option *brief.Node) (err error) {
 		if err := makeFolder(project, "cmd", project); err != nil {
 			return err
 		}
 
-		tmpl, err := FolderTemplates(feature)
+		tmpl, err := FolderTemplates(option.Name)
 		if err != nil {
 			return
 		}
@@ -84,7 +83,7 @@ var folderActions = map[string]ActionFn{
 			Name:     project,
 			Packages: []string{"one", "two", "three"},
 		}
-		if err = tmpl.ExecuteTemplate(main, option, &data); err != nil {
+		if err = tmpl.ExecuteTemplate(main, option.Name, &data); err != nil {
 			return fmt.Errorf("cli template %s failed: %s", option, err)
 		}
 		return nil

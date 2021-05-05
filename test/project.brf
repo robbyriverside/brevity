@@ -1,0 +1,14 @@
+brevity
+    project:first
+        cli:go-flags
+            commands
+                command:one
+                    args  /* positional arguments */
+                        arg:filename desc:"filename for one command"
+                    options
+                        option:output short:o desc:"output redirection"
+            options
+                option:verbose short:v desc:"verbose output"
+
+
+        

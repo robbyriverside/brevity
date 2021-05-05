@@ -1,4 +1,0 @@
-name = "first"
-cli = "go-flags"
-api = "gin"
-mocks = "go-mocks"

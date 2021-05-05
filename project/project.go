@@ -3,16 +3,11 @@ package project
 import (
 	"embed"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/robbyriverside/brevity/internal/brevity"
-)
-
-const (
-	NameFeature = "name"
-	CLIFeature  = "cli"
-	APIFeature  = "api"
-	MockFeature = "mocks"
+	"github.com/robbyriverside/brief"
 )
 
 //go:embed templates
@@ -32,15 +27,12 @@ func Dir(dir string) (res []string, err error) {
 }
 
 // ActionFn project generation action
-type ActionFn func(project, feature, option string) error
-
-// Features for the project
-type Features map[string]string
+type ActionFn func(project string, option *brief.Node) error
 
 // Project to be generated
 type Project struct {
 	err      error
-	features Features
+	features *brief.Node
 }
 
 // Error found in the project
@@ -61,9 +53,19 @@ func (p *Project) String() string {
 // Read project from specfile
 func Read(specfile string) *Project {
 	var proj Project
-	err := brevity.Read(specfile, &proj.features)
+	file, err := os.Open(specfile)
 	if err != nil {
 		proj.err = err
+		return &proj
+	}
+	node, err := brief.Decode(file)
+	if err != nil {
+		proj.err = err
+		return &proj
+	}
+	proj.features = node.FindNode("project")
+	if proj.features == nil {
+		proj.err = fmt.Errorf("brevity file %q does not contain project", specfile)
 	}
 	return &proj
 }
