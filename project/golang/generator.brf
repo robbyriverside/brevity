@@ -1,8 +1,5 @@
 generator
-    vars
-        var:command  // each element searches for itself and gets the value from the element (if exists)
-        var:project  // shorthand for... var:project element:project name:name   << name is the default
-    templates dir:"templates" // load all templates defined in these files
+    templates 
         template:main file:"main.go" dir:"cmd/%project%" element:project
         template:all file:"all.go" dir:"internal/command" element:project
         template:command file:"command.go" dir:"internal/command/%command%" element:command
@@ -12,7 +9,7 @@ generator
         // REMEMBER: order of execution is defined by the elements file. 
         // EG projects.brf is the project elements file for project
     actions
-        action:mod exec:"go build internal/%project%/main.go" element:project
-        action:mod exec:"go mod init %project:host%/%project:account%/%project%"  element:project
-        action:mod generate:makefile input:makespec  element:project // call another generator
+        action:build exec:"go build internal/%project%/main.go" element:project
+        action:mod exec:"go mod init %project.host%/%project.account%/%project%"  element:project
+        action:generate generate:makefile element:project // call another generator
         // TODO: generate a file from template and call it as an action!

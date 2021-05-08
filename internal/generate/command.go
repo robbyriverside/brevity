@@ -11,7 +11,7 @@ import (
 
 /*
 Generates code by reading a brevity file containing specs for 1 or more projects.
-Each project spec references a project generator.  A project generator creates a projec of a specific type.
+Each project spec references a project generator.  A project generator creates a project of a specific type.
 For exmaple: A generator for...
 	- golang backend project
 	- flutter app project
@@ -69,9 +69,27 @@ func Generate(dest string, brevity *brief.Node) error {
 	}
 	for i, project := range brevity.Body {
 		dict := Dictionary{}
-		if err = GenProject(i, project, dict); err != nil {
+		if err = Project(i, project, dict); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// Project generates nth project in the spec
+func Project(nth int, project *brief.Node, dict Dictionary) error {
+	genfile, ok := project.Get("generate")
+	if !ok {
+		return fmt.Errorf("generate key is required and must contain filename in project %s", project.Name)
+	}
+	node, err := Read(genfile)
+	if err != nil {
+		return err
+	}
+	gtor, err := NewGenerator(node)
+	if err != nil {
+		return err
+	}
+
+	return gtor.NextNode(nth, project, dict)
 }

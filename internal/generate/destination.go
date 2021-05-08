@@ -3,7 +3,13 @@ package generate
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 )
+
+// MakeFolder from list of dir names
+func MakeFolder(names ...string) error {
+	return os.MkdirAll(filepath.Join(names...), os.ModePerm)
+}
 
 // ValidateFolder ensures a folder exists and can be written
 func ValidateFolder(name string) error {
