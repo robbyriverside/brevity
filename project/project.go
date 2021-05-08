@@ -4,13 +4,11 @@ import (
 	"embed"
 	"fmt"
 	"os"
-	"path/filepath"
 
-	"github.com/robbyriverside/brevity/internal/brevity"
 	"github.com/robbyriverside/brief"
 )
 
-//go:embed templates
+//go:embed golang/templates
 var templates embed.FS
 
 // Dir of embedded templates
@@ -68,22 +66,4 @@ func Read(specfile string) *Project {
 		proj.err = fmt.Errorf("brevity file %q does not contain project", specfile)
 	}
 	return &proj
-}
-
-// Generate a project into a destination folder
-func (p *Project) Generate(dest string) error {
-	if p.Error() != nil {
-		return p.Error()
-	}
-	path, err := filepath.Abs(dest)
-	if err != nil {
-		return fmt.Errorf("expanding destination %s failed: %s", dest, err)
-	}
-	if err := brevity.ValidateFolder(path); err != nil {
-		return err
-	}
-
-	fmt.Println("generate:", path, p.features)
-
-	return p.folders().makefile().docker().Error()
 }

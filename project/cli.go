@@ -10,7 +10,7 @@ import (
 	"github.com/robbyriverside/brief"
 )
 
-func (p *Project) folders() *Project {
+func (p *Project) cli() *Project {
 	if p.Error() != nil {
 		return p
 	}
@@ -21,7 +21,7 @@ func (p *Project) folders() *Project {
 		return p.Stop(errors.New("required feature: name, not found"))
 	}
 	for _, option := range p.features.Body {
-		if action, ok := folderActions[option.Type]; ok {
+		if action, ok := commandActions[option.Type]; ok {
 			if err := action(name, option); err != nil {
 				return p.Stop(err)
 			}
@@ -46,28 +46,28 @@ const (
 )
 
 var (
-	folderTemplates = map[string]*template.Template{}
+	commandTemplates = map[string]*template.Template{}
 )
 
-// FolderTemplates created lazy by reading embed filesystem
-func FolderTemplates(name string) (tmpl *template.Template, err error) {
-	tmpl, ok := folderTemplates[name]
+// CommandTemplates created lazy by reading embed filesystem
+func CommandTemplates(name string) (tmpl *template.Template, err error) {
+	tmpl, ok := commandTemplates[name]
 	if !ok {
 		tmpl, err = template.ParseFS(templates, filepath.Join(rootTemplate, name, "*.tmpl"))
 		if err == nil {
-			folderTemplates[name] = tmpl
+			commandTemplates[name] = tmpl
 		}
 	}
 	return
 }
 
-var folderActions = map[string]ActionFn{
+var commandActions = map[string]ActionFn{
 	"cli": func(project string, option *brief.Node) (err error) {
 		if err := makeFolder(project, "cmd", project); err != nil {
 			return err
 		}
 
-		tmpl, err := FolderTemplates(option.Name)
+		tmpl, err := CommandTemplates(option.Name)
 		if err != nil {
 			return
 		}

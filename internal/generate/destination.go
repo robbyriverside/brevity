@@ -1,4 +1,4 @@
-package brevity
+package generate
 
 import (
 	"fmt"
