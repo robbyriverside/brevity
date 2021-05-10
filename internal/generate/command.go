@@ -51,11 +51,14 @@ func Read(specfile string) (*brief.Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	node, err := brief.Decode(file)
+	nodes, err := brief.Decode(file)
 	if err != nil {
 		return nil, err
 	}
-	return node, nil
+	if len(nodes) > 1 {
+		return nil, fmt.Errorf("brevity spec file %q has more than one top level form", specfile)
+	}
+	return nodes[0], nil
 }
 
 // Generate brevity projects into a destination folder

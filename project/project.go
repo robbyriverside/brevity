@@ -56,11 +56,12 @@ func Read(specfile string) *Project {
 		proj.err = err
 		return &proj
 	}
-	node, err := brief.Decode(file)
+	nodes, err := brief.Decode(file)
 	if err != nil {
 		proj.err = err
 		return &proj
 	}
+	node := nodes[0]
 	proj.features = node.FindNode("project")
 	if proj.features == nil {
 		proj.err = fmt.Errorf("brevity file %q does not contain project", specfile)
