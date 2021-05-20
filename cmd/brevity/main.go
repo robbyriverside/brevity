@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/robbyriverside/brevity/internal/brevity"
-	"github.com/robbyriverside/brevity/internal/generate"
+	"github.com/robbyriverside/brevity/internal/generator"
 
 	"github.com/jessevdk/go-flags"
 )
@@ -13,7 +13,7 @@ func main() {
 	parser := flags.NewParser(brevity.Options, flags.Default)
 	parser.Name = "brevity"
 
-	if err := generate.AddCommand(parser); err != nil {
+	if err := generator.AddCommand(parser); err != nil {
 		log.Fatal(err)
 	}
 

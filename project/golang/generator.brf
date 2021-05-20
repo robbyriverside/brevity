@@ -1,4 +1,4 @@
-generator
+generator  extend:"github.com/robbyriverside/GOCLI"
     templates 
         template:main file:"main.go" dir:"cmd/%project%" element:project
         template:all file:"all.go" dir:"internal/command" element:project

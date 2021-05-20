@@ -1,4 +1,4 @@
-package generate
+package generator
 
 import (
 	"fmt"
@@ -70,9 +70,8 @@ func Generate(dest string, brevity *brief.Node) error {
 	if err := ValidateFolder(path); err != nil {
 		return err
 	}
-	for i, project := range brevity.Body {
-		dict := Dictionary{}
-		if err = Project(i, project, dict); err != nil {
+	for _, project := range brevity.Body {
+		if err = Project(project); err != nil {
 			return err
 		}
 	}
@@ -80,19 +79,23 @@ func Generate(dest string, brevity *brief.Node) error {
 }
 
 // Project generates nth project in the spec
-func Project(nth int, project *brief.Node, dict Dictionary) error {
-	genfile, ok := project.Get("generate")
+func Project(project *brief.Node) error {
+	genfile, ok := project.Get("generator")
 	if !ok {
 		return fmt.Errorf("generate key is required and must contain filename in project %s", project.Name)
 	}
+
+	gtor := New()
+
 	node, err := Read(genfile)
 	if err != nil {
 		return err
 	}
-	gtor, err := NewGenerator(node)
-	if err != nil {
+	files := NewFileSet()
+	if err := gtor.compile(node, files.Add(genfile)); err != nil {
 		return err
 	}
 
-	return gtor.NextNode(nth, project, dict)
+	dict := Dictionary{}
+	return gtor.NextNode(project, dict)
 }
