@@ -24,15 +24,16 @@ type Command struct {
 		SpecFile    string `positional-arg-name:"specfile" description:"brevity specification file"`
 		Destination string `positional-arg-name:"destination" description:"where to put the project root folder"`
 	} `positional-args:"true" required:"true"`
+	Library string `short:"l" long:"lib" description:"Brevity library location" env:"BREVITY_LIB"`
 }
 
 // Execute the project command
 func (cmd *Command) Execute(args []string) error {
-	node, err := Read(cmd.Args.SpecFile)
+	node, err := cmd.ReadSpec()
 	if err != nil {
 		return err
 	}
-	return Generate(cmd.Args.Destination, node)
+	return cmd.Generate(cmd.Args.Destination, cmd.Library, node)
 }
 
 // AddCommand to the parser
@@ -45,24 +46,37 @@ func AddCommand(parser *flags.Parser) error {
 	return err
 }
 
-// Read brevity spec from file
-func Read(specfile string) (*brief.Node, error) {
-	file, err := os.Open(specfile)
-	if err != nil {
-		return nil, err
-	}
-	nodes, err := brief.Decode(file)
+// ReadNode reads a single node from a brief file
+func ReadNode(specfile string) (*brief.Node, error) {
+	nodes, err := brief.DecodeFile(specfile)
 	if err != nil {
 		return nil, err
 	}
 	if len(nodes) > 1 {
-		return nil, fmt.Errorf("brevity spec file %q has more than one top level form", specfile)
+		return nil, fmt.Errorf("brief spec file %q has more than one top level form", specfile)
 	}
 	return nodes[0], nil
 }
 
+// ReadSpec brevity spec from file
+func (cmd *Command) ReadSpec() (*brief.Node, error) {
+	spec, err := ReadNode(cmd.Args.SpecFile)
+	if err != nil {
+		return nil, err
+	}
+	if spec.Type != "brevity" {
+		return nil, fmt.Errorf("invalid brevity spec")
+	}
+	for _, project := range spec.Body {
+		if project.Type != "project" {
+			return nil, fmt.Errorf("invalid brevity project")
+		}
+	}
+	return spec, nil
+}
+
 // Generate brevity projects into a destination folder
-func Generate(dest string, brevity *brief.Node) error {
+func (cmd *Command) Generate(dest, lib string, brevity *brief.Node) error {
 	path, err := filepath.Abs(dest)
 	if err != nil {
 		return fmt.Errorf("expanding destination %s failed: %s", dest, err)
@@ -70,32 +84,72 @@ func Generate(dest string, brevity *brief.Node) error {
 	if err := ValidateFolder(path); err != nil {
 		return err
 	}
+	// Generate code for each project
 	for _, project := range brevity.Body {
-		if err = Project(project); err != nil {
+		if err := cmd.Project(project); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// Project generates nth project in the spec
-func Project(project *brief.Node) error {
-	genfile, ok := project.Get("generator")
-	if !ok {
-		return fmt.Errorf("generate key is required and must contain filename in project %s", project.Name)
-	}
+// CompileSection generates nth project in the spec
+func (cmd *Command) CompileSection(section *brief.Node) (*Generator, error) {
+	genfile := filepath.Join(cmd.Library, section.Type, "generator.brief")
 
 	gtor := New()
 
-	node, err := Read(genfile)
+	node, err := ReadNode(genfile)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	files := NewFileSet()
 	if err := gtor.compile(node, files.Add(genfile)); err != nil {
-		return err
+		return nil, err
 	}
 
-	dict := Dictionary{}
-	return gtor.NextNode(project, dict)
+	if err := gtor.loadTemplates(section, cmd.Library); err != nil {
+		return nil, err
+	}
+	return gtor, nil
+}
+
+// Project generates nth project in the spec
+func (cmd *Command) Project(project *brief.Node) error {
+	if project.Name == "" {
+		return fmt.Errorf("project name is required")
+	}
+	dir := filepath.Join(cmd.Args.Destination, project.Name)
+	if err := os.Chdir(dir); err != nil {
+		return err
+	}
+	for _, section := range project.Body {
+		gtor, err := cmd.CompileSection(section)
+		if err != nil {
+			return err
+		}
+
+		if err := gtor.ApplyTemplates(project, dir); err != nil {
+			return err
+		}
+		if err := gtor.ApplyTemplates(section, dir); err != nil {
+			return err
+		}
+
+		for _, subnode := range section.Body {
+			if err := gtor.NextNode(subnode, dir); err != nil {
+				return err
+			}
+		}
+
+		// actions as we walk back up the tree
+		// XXX: should be predictable, may also be actions on a second pass
+		if err := gtor.ApplyActions(section, dir); err != nil {
+			return err
+		}
+		if err := gtor.ApplyActions(project, dir); err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -3,9 +3,13 @@ package generator
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/robbyriverside/brief"
+	"github.com/sirupsen/logrus"
 )
 
 // Dictionary is used to lookup elements within a hierarchy
@@ -67,16 +71,17 @@ func (gtor *Generator) compile(gen *brief.Node, files *FileSet) error {
 		return files.Err // stops recursive generator files
 	}
 	var cat Catalog
-	basefile, ok := gen.Get("extend")
-	if ok {
-		node, err := Read(basefile)
-		if err != nil {
-			return err
-		}
-		if err := gtor.compile(node, files.Add(basefile)); err != nil {
-			return err
-		}
-	}
+	// TODO: handle extension
+	// basefile, ok := gen.Get("extend")
+	// if ok {
+	// 	node, err := Read(basefile)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	if err := gtor.compile(node, files.Add(basefile)); err != nil {
+	// 		return err
+	// 	}
+	// }
 	templates := gen.GetNode("templates")
 	if templates != nil {
 		for _, tmpl := range templates.Body {
@@ -99,51 +104,129 @@ func (gtor *Generator) compile(gen *brief.Node, files *FileSet) error {
 			agenda.AddAction(action)
 		}
 	}
-	dir, ok := templates.Get("dir")
-	if !ok {
-		return fmt.Errorf("templates dir parameter is required")
-	}
-	if stat, err := os.Stat(dir); os.IsNotExist(err) || !stat.IsDir() {
-		return fmt.Errorf("templates dir:%q must be an existing directory", dir)
-	}
-	// glob := filepath.Join(dir, "*.tmpl")
-	// if _, err := gtor.Template.ParseGlob(glob); err != nil {
-	// 	return fmt.Errorf("failed parsing templates dir:%q - %s", dir, err)
-	// }
 	return nil
 }
 
-// GenFile generates a file from a template
-func (gtor *Generator) GenFile(node *brief.Node, dict Dictionary) error {
-	// TODO: generate a file by executing a template
+func (gtor *Generator) loadTemplates(section *brief.Node, lib string) error {
+	fileglob := filepath.Join(lib, section.Type, "templates", "*.tmpl")
+	if _, err := gtor.Template.ParseGlob(fileglob); err != nil {
+		return err
+	}
+	if section.Name != "" {
+		fileglob := filepath.Join(lib, section.Type, "templates", section.Name, "*.tmpl")
+		if _, err := gtor.Template.ParseGlob(fileglob); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-// ExecAction executes an action
-func (gtor *Generator) ExecAction(node *brief.Node, dict Dictionary) error {
-	// TODO: exec an os script
-	//       OR call a generator
+// ApplyTemplates executes templates for this spec node
+func (gtor *Generator) ApplyTemplates(spec *brief.Node, dir string) error {
+	agenda := gtor.Catalog.Get(spec.Type)
+	if agenda == nil {
+		return nil
+	}
+	for _, action := range agenda.Templates {
+		if err := gtor.GenFile(action, spec, dir); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ApplyActions executes actions for this spec node
+func (gtor *Generator) ApplyActions(spec *brief.Node, dir string) error {
+	agenda := gtor.Catalog.Get(spec.Type)
+	if agenda == nil {
+		return nil
+	}
+	for _, action := range agenda.Actions {
+		if err := gtor.ExecAction(action, spec, dir); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 // NextNode recursively generates node hierarchy
-func (gtor *Generator) NextNode(node *brief.Node, dict Dictionary) error {
-	dict[node.Type] = node
-
-	agenda := gtor.Catalog.Get(node.Type)
-	for _, tmpl := range agenda.Templates {
-		gtor.GenFile(tmpl, dict)
+func (gtor *Generator) NextNode(node *brief.Node, dir string) error {
+	if err := gtor.ApplyTemplates(node, dir); err != nil {
+		return err
 	}
 
 	for _, subnode := range node.Body {
-		gtor.NextNode(subnode, dict)
+		if err := gtor.NextNode(subnode, dir); err != nil {
+			return err
+		}
 	}
 
 	// actions as we walk back up the tree
 	// no reason why, may also be actions on a second pass
-	for _, act := range agenda.Actions {
-		gtor.ExecAction(act, dict)
+	return gtor.ApplyActions(node, dir)
+}
+
+// ExecValueTemplate for templates inside action key values
+func ExecValueTemplate(value string, node *brief.Node) (string, error) {
+	if !strings.Contains(value, "{{") {
+		return value, nil
 	}
-	delete(dict, node.Type)
+	filetmpl, err := template.New("value").Parse(value)
+	if err != nil {
+		return "", err
+	}
+	var out strings.Builder
+	if err := filetmpl.Execute(&out, node); err != nil {
+		return "", err
+	}
+	return out.String(), nil
+}
+
+// GenFile generates a file from a template
+func (gtor *Generator) GenFile(action, spec *brief.Node, dir string) error {
+	tmpl := gtor.Template.Lookup(action.Name)
+	if tmpl == nil {
+		return fmt.Errorf("no template found for %s", action.Name)
+	}
+	filetmpl, ok := action.Keys["file"]
+	if !ok {
+		return fmt.Errorf("template %s has no file", action.Name)
+	}
+
+	filename, err := ExecValueTemplate(filetmpl, spec)
+	if err != nil {
+		return err
+	}
+	filename = filepath.Join(dir, filename)
+	file, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	return gtor.Template.ExecuteTemplate(file, action.Name, spec)
+}
+
+// ExecAction executes an action
+func (gtor *Generator) ExecAction(action, spec *brief.Node, dir string) error {
+	// FIXME: call a generator
+	exectmpl, ok := action.Keys["exec"]
+	if !ok {
+		return fmt.Errorf("template %s has no file", action.Name)
+	}
+
+	execute, err := ExecValueTemplate(exectmpl, spec)
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command(execute)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"output": string(out),
+			"action": action.Name,
+			"dir":    dir,
+		}).Error("failed action")
+		return err
+	}
 	return nil
 }
