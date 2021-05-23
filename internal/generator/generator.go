@@ -9,6 +9,8 @@ import (
 	"text/template"
 
 	"github.com/robbyriverside/brief"
+
+	"github.com/google/shlex"
 	"github.com/sirupsen/logrus"
 )
 
@@ -236,7 +238,11 @@ func (gtor *Generator) ExecAction(action, spec *brief.Node, dir string) error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command(execute)
+	args, err := shlex.Split(execute)
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command(args[0], args[1:]...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
