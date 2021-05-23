@@ -33,7 +33,7 @@ func (cmd *Command) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	return cmd.Generate(cmd.Args.Destination, cmd.Library, node)
+	return cmd.Generate(node)
 }
 
 // AddCommand to the parser
@@ -76,11 +76,13 @@ func (cmd *Command) ReadSpec() (*brief.Node, error) {
 }
 
 // Generate brevity projects into a destination folder
-func (cmd *Command) Generate(dest, lib string, brevity *brief.Node) error {
-	path, err := filepath.Abs(dest)
+func (cmd *Command) Generate(brevity *brief.Node) error {
+	path, err := filepath.Abs(cmd.Args.Destination)
 	if err != nil {
-		return fmt.Errorf("expanding destination %s failed: %s", dest, err)
+		return fmt.Errorf("expanding destination %s failed: %s", cmd.Args.Destination, err)
 	}
+	fmt.Println("abs dest:", path)
+	cmd.Args.Destination = path
 	if err := ValidateFolder(path); err != nil {
 		return err
 	}
@@ -108,7 +110,7 @@ func (cmd *Command) CompileSection(section *brief.Node) (*Generator, error) {
 		return nil, err
 	}
 
-	if err := gtor.loadTemplates(section, cmd.Library); err != nil {
+	if err := gtor.LoadSectionTemplates(section, cmd.Library); err != nil {
 		return nil, err
 	}
 	return gtor, nil
@@ -120,6 +122,10 @@ func (cmd *Command) Project(project *brief.Node) error {
 		return fmt.Errorf("project name is required")
 	}
 	dir := filepath.Join(cmd.Args.Destination, project.Name)
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		return err
+	}
+	fmt.Println("home dir", dir)
 	if err := os.Chdir(dir); err != nil {
 		return err
 	}

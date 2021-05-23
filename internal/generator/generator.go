@@ -42,8 +42,8 @@ func (a *Agenda) AddAction(node *brief.Node) {
 // Catalog of agenda for elements in the spac
 type Catalog map[string]*Agenda
 
-// Get the agenda for an element
-func (cat Catalog) Get(elem string) *Agenda {
+// Add the agenda for an element
+func (cat Catalog) Add(elem string) *Agenda {
 	agenda, ok := cat[elem]
 	if !ok {
 		agenda = NewAgenda()
@@ -70,7 +70,7 @@ func (gtor *Generator) compile(gen *brief.Node, files *FileSet) error {
 	if files.Err != nil {
 		return files.Err // stops recursive generator files
 	}
-	var cat Catalog
+	cat := gtor.Catalog
 	// TODO: handle extension
 	// basefile, ok := gen.Get("extend")
 	// if ok {
@@ -85,36 +85,49 @@ func (gtor *Generator) compile(gen *brief.Node, files *FileSet) error {
 	templates := gen.GetNode("templates")
 	if templates != nil {
 		for _, tmpl := range templates.Body {
-			elem, ok := tmpl.Get("element")
+			elem, ok := tmpl.Keys["element"]
 			if !ok {
 				return fmt.Errorf("missing template:%q element keyword", tmpl.Name)
 			}
-			agenda := cat.Get(elem)
+			agenda := cat.Add(elem)
 			agenda.AddTemplate(tmpl)
 		}
 	}
 	actions := gen.GetNode("actions")
 	if actions != nil {
 		for _, action := range actions.Body {
-			elem, ok := action.Get("element")
+			elem, ok := action.Keys["element"]
 			if !ok {
 				return fmt.Errorf("missing action:%q element keyword", action.Name)
 			}
-			agenda := cat.Get(elem)
+			agenda := cat.Add(elem)
 			agenda.AddAction(action)
 		}
 	}
 	return nil
 }
 
-func (gtor *Generator) loadTemplates(section *brief.Node, lib string) error {
-	fileglob := filepath.Join(lib, section.Type, "templates", "*.tmpl")
-	if _, err := gtor.Template.ParseGlob(fileglob); err != nil {
+// LoadGlobTemplates loads templates from the fileglob into generator
+func (gtor *Generator) LoadGlobTemplates(fileglob string) error {
+	filenames, err := filepath.Glob(fileglob)
+	if err != nil {
+		return err
+	}
+	if len(filenames) > 0 {
+		if _, err := gtor.Template.ParseGlob(fileglob); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// LoadSectionTemplates for a section
+func (gtor *Generator) LoadSectionTemplates(section *brief.Node, lib string) error {
+	if err := gtor.LoadGlobTemplates(filepath.Join(lib, section.Type, "templates", "*.tmpl")); err != nil {
 		return err
 	}
 	if section.Name != "" {
-		fileglob := filepath.Join(lib, section.Type, "templates", section.Name, "*.tmpl")
-		if _, err := gtor.Template.ParseGlob(fileglob); err != nil {
+		if err := gtor.LoadGlobTemplates(filepath.Join(lib, section.Type, "templates", section.Name, "*.tmpl")); err != nil {
 			return err
 		}
 	}
@@ -123,8 +136,8 @@ func (gtor *Generator) loadTemplates(section *brief.Node, lib string) error {
 
 // ApplyTemplates executes templates for this spec node
 func (gtor *Generator) ApplyTemplates(spec *brief.Node, dir string) error {
-	agenda := gtor.Catalog.Get(spec.Type)
-	if agenda == nil {
+	agenda, ok := gtor.Catalog[spec.Type]
+	if !ok {
 		return nil
 	}
 	for _, action := range agenda.Templates {
@@ -137,8 +150,8 @@ func (gtor *Generator) ApplyTemplates(spec *brief.Node, dir string) error {
 
 // ApplyActions executes actions for this spec node
 func (gtor *Generator) ApplyActions(spec *brief.Node, dir string) error {
-	agenda := gtor.Catalog.Get(spec.Type)
-	if agenda == nil {
+	agenda, ok := gtor.Catalog[spec.Type]
+	if !ok {
 		return nil
 	}
 	for _, action := range agenda.Actions {
@@ -198,7 +211,12 @@ func (gtor *Generator) GenFile(action, spec *brief.Node, dir string) error {
 		return err
 	}
 	filename = filepath.Join(dir, filename)
-	file, err := os.Open(filename)
+	fmt.Println("genfile", action.Name, filename)
+	path := filepath.Dir(filename)
+	if err := os.MkdirAll(path, os.ModePerm); err != nil {
+		return err
+	}
+	file, err := os.Create(filename)
 	if err != nil {
 		return err
 	}
