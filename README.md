@@ -53,7 +53,7 @@ generator
         action:build exec:"go build -o {{.Name}} cmd/{{ .Name }}/main.go" element:project
 ```
 
-After all the files are generated using templates, actions are called to create the go.mod file, get the go-flags package and finally build the executable.  
+After all the files are generated using templates, actions are called to create the go.mod file, get the go-flags package and finally build the executable.  All details are found in the [go-brevity package](https://github.com/robbyriverside/go-brevity).
 
 ### Generator Procedure
 
