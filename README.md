@@ -8,7 +8,7 @@ The contents of files are defined using Go text-templates.  The generated files 
 
 ## brevity command
 
-Call brevity command to generate a working cli project.
+The brevity command will generate a working cli project.
 
 ```bash
 > brevity generate spec.brief output/
@@ -30,7 +30,7 @@ brevity
                 command:describe desc:"describe command" short:"describe me"
 ```
 
-This the above brevity spec produces a working cli project with two commands: exec & describe.
+The above brevity spec produces a working cli project with two commands: exec & describe.
 
 ## Generator
 
@@ -55,10 +55,12 @@ After all the files are generated using templates, actions are called to create 
 
 ### Generator Procedure
 
-The generator walks the user written brevity spec.  This can contain multiple projects, which have a package name.  Inside a package are sections which specify each kind of generator, notice the example above calls the cli generator using the go-flags option.
+The generator walks the user written brevity spec.  This can contain multiple projects, each with its own package name, hub and account.  Inside a package are sections which specify each kind of generator, notice the example above calls the cli generator using the go-flags option.
 
-Each section loads the generator spec and template files.  The template used is the name of the template element in the generator.  The file key may contain a template, which is evaluated in the context of the node type found in the element key.
+Each section loads the generator spec and template files.  Which template used is the name of the template node in the generator spec.  The file key may contain a template, which is evaluated in the context of the node type found in the element key.
 
-Template generation and actions are triggered when as the generator walks the brevity spec.  As each element is encountered, during the walk, that node is applied to the templates.  When the walker returns to this element after walking its sub-elements, the actions are triggered.  This ensures all template file generation is complete before the actions are executed in the base directory of the generated project.
+Template generation and actions are triggered when as the generator walks the brevity spec.  As each element is encountered, during the walk, that node is applied to the templates that match the element key.  
+
+When the walker returns to this element after walking its sub-elements, the actions are triggered.  This ensures all template file generation is complete before the actions are executed.  All actions are triggered in the base directory of the generated project.
 
 __This page under construction__
