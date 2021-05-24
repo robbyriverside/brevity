@@ -8,6 +8,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/robbyriverside/brevity/internal/brevity"
 	"github.com/robbyriverside/brief"
 
 	"github.com/google/shlex"
@@ -213,7 +214,9 @@ func (gtor *Generator) GenFile(action, spec *brief.Node, dir string) error {
 		return err
 	}
 	filename = filepath.Join(dir, filename)
-	fmt.Println("genfile", action.Name, filename)
+	if brevity.Options.Verbose {
+		fmt.Printf("template %s on %s:%s -> %s\n", action.Name, spec.Type, spec.Name, filename)
+	}
 	path := filepath.Dir(filename)
 	if err := os.MkdirAll(path, os.ModePerm); err != nil {
 		return err
@@ -241,6 +244,9 @@ func (gtor *Generator) ExecAction(action, spec *brief.Node, dir string) error {
 	args, err := shlex.Split(execute)
 	if err != nil {
 		return err
+	}
+	if brevity.Options.Verbose {
+		fmt.Printf("action %s on %s:%s exec: %s\n", action.Name, spec.Type, spec.Name, strings.Join(args, " "))
 	}
 	cmd := exec.Command(args[0], args[1:]...)
 	out, err := cmd.CombinedOutput()

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/jessevdk/go-flags"
+	"github.com/robbyriverside/brevity/internal/brevity"
 	"github.com/robbyriverside/brief"
 )
 
@@ -81,7 +82,6 @@ func (cmd *Command) Generate(brevity *brief.Node) error {
 	if err != nil {
 		return fmt.Errorf("expanding destination %s failed: %s", cmd.Args.Destination, err)
 	}
-	fmt.Println("abs dest:", path)
 	cmd.Args.Destination = path
 	if err := ValidateFolder(path); err != nil {
 		return err
@@ -125,7 +125,9 @@ func (cmd *Command) Project(project *brief.Node) error {
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		return err
 	}
-	fmt.Println("home dir", dir)
+	if brevity.Options.Verbose {
+		fmt.Println("--> project", project.Name, dir)
+	}
 	if err := os.Chdir(dir); err != nil {
 		return err
 	}
