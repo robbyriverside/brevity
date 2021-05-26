@@ -73,18 +73,6 @@ func (gtor *Generator) compile(gen *brief.Node, files *FileSet) error {
 	if files.Err != nil {
 		return files.Err // stops recursive generator files
 	}
-	cat := gtor.Catalog
-	// TODO: handle extension
-	// basefile, ok := gen.Get("extend")
-	// if ok {
-	// 	node, err := Read(basefile)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	if err := gtor.compile(node, files.Add(basefile)); err != nil {
-	// 		return err
-	// 	}
-	// }
 	templates := gen.GetNode("templates")
 	if templates != nil {
 		for _, tmpl := range templates.Body {
@@ -92,7 +80,7 @@ func (gtor *Generator) compile(gen *brief.Node, files *FileSet) error {
 			if !ok {
 				return fmt.Errorf("missing template:%q element keyword", tmpl.Name)
 			}
-			agenda := cat.Add(elem)
+			agenda := gtor.Catalog.Add(elem)
 			agenda.AddTemplate(tmpl)
 		}
 	}
@@ -103,7 +91,7 @@ func (gtor *Generator) compile(gen *brief.Node, files *FileSet) error {
 			if !ok {
 				return fmt.Errorf("missing action:%q element keyword", action.Name)
 			}
-			agenda := cat.Add(elem)
+			agenda := gtor.Catalog.Add(elem)
 			agenda.AddAction(action)
 		}
 	}
@@ -116,15 +104,22 @@ func (gtor *Generator) LoadGlobTemplates(fileglob string) error {
 	if err != nil {
 		return err
 	}
-	if len(filenames) > 0 {
-		if _, err := gtor.Template.ParseGlob(fileglob); err != nil {
-			return err
-		}
+	if len(filenames) == 0 {
+		return nil
 	}
-	return nil
+	_, err = gtor.Template.ParseFiles(filenames...)
+	return err
 }
 
-// LoadSectionTemplates for a section
+func (gtor *Generator) loadLocalTemplates(node *brief.Node) error {
+	local, ok := node.Keys["templates"]
+	if !ok {
+		return nil
+	}
+	return gtor.LoadGlobTemplates(local)
+}
+
+// LoadSectionTemplates load templates for a section
 func (gtor *Generator) LoadSectionTemplates(section *brief.Node, lib string) error {
 	if err := gtor.LoadGlobTemplates(filepath.Join(lib, section.Type, "templates", "*.tmpl")); err != nil {
 		return err
@@ -134,7 +129,16 @@ func (gtor *Generator) LoadSectionTemplates(section *brief.Node, lib string) err
 			return err
 		}
 	}
-	return nil
+	// local brevity templates
+	if err := gtor.loadLocalTemplates(section.Parent.Parent); err != nil {
+		return err
+	}
+	// local project templates
+	if err := gtor.loadLocalTemplates(section.Parent); err != nil {
+		return err
+	}
+	// local section templates
+	return gtor.loadLocalTemplates(section)
 }
 
 // ApplyTemplates executes templates for this spec node
@@ -226,12 +230,15 @@ func (gtor *Generator) GenFile(action, spec *brief.Node, dir string) error {
 		return err
 	}
 	defer file.Close()
-	return gtor.Template.ExecuteTemplate(file, action.Name, spec)
+	if err := gtor.Template.ExecuteTemplate(file, action.Name, spec); err != nil {
+		return err
+	}
+	return file.Sync()
 }
 
 // ExecAction executes an action
 func (gtor *Generator) ExecAction(action, spec *brief.Node, dir string) error {
-	// FIXME: call a generator
+	// MAYBE: call a generator
 	exectmpl, ok := action.Keys["exec"]
 	if !ok {
 		return fmt.Errorf("template %s has no file", action.Name)

@@ -131,6 +131,9 @@ func (cmd *Command) Project(project *brief.Node) error {
 	if err := os.Chdir(dir); err != nil {
 		return err
 	}
+	if err := cmd.ExpandSectionMacros(project); err != nil {
+		return err
+	}
 	for _, section := range project.Body {
 		gtor, err := cmd.CompileSection(section)
 		if err != nil {
