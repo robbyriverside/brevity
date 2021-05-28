@@ -73,7 +73,7 @@ func (gtor *Generator) compile(gen *brief.Node, files *FileSet) error {
 	if files.Err != nil {
 		return files.Err // stops recursive generator files
 	}
-	templates := gen.GetNode("templates")
+	templates := gen.Child("templates")
 	if templates != nil {
 		for _, tmpl := range templates.Body {
 			elem, ok := tmpl.Keys["element"]
@@ -84,7 +84,7 @@ func (gtor *Generator) compile(gen *brief.Node, files *FileSet) error {
 			agenda.AddTemplate(tmpl)
 		}
 	}
-	actions := gen.GetNode("actions")
+	actions := gen.Child("actions")
 	if actions != nil {
 		for _, action := range actions.Body {
 			elem, ok := action.Keys["element"]

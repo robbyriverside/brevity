@@ -82,7 +82,8 @@ func (cmd *Command) ExpandSectionMacros(project *brief.Node) error {
 	expanded := make([]*brief.Node, 0)
 	for {
 		for _, section := range current {
-			var gtor Generator
+			gtor := New()
+
 			if err := gtor.LoadSectionTemplates(section, cmd.Library); err != nil {
 				return err
 			}
