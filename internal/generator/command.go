@@ -5,8 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/jessevdk/go-flags"
 	"github.com/robbyriverside/brevity/internal/brevity"
+
+	"github.com/jessevdk/go-flags"
 	"github.com/robbyriverside/brief"
 )
 

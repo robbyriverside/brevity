@@ -49,7 +49,7 @@ generator
 
     actions
         action:mod exec:"go mod init {{.Join `/` `project.hub` `project.account` `project`}}" element:cli
-        action:getflags exec:"go get github.com/jessevdk/go-flags" element:project
+        action:tidy exec:"go mod tidy" element:project
         action:build exec:"go build -o {{.Name}} cmd/{{ .Name }}/main.go" element:project
 ```
 
@@ -60,6 +60,8 @@ After all the files are generated using templates, actions are called to create 
 The generator walks the user written brevity spec.  This can contain multiple projects, each with its own package name, hub and account.  Inside a project are sections which specify each kind of generator, notice the spec.brief file above calls the cli generator using the go-flags option.
 
 Each section loads the generator spec and template files.  Template generation and actions are triggered when as the generator walks the brevity spec.  As each element is encountered, during the walk, that node is applied to the templates that match the element key.  
+
+![Brief Generator Syntax](images/BrevitySpec.png)
 
 When the walker returns to this element after walking its sub-elements, the actions are triggered.  This ensures all template file generation is complete before the actions are executed.  All actions are triggered in the base directory of the generated project.
 
