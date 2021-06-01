@@ -11,35 +11,51 @@ import (
 	"github.com/robbyriverside/brevity/internal/brevity"
 	"github.com/robbyriverside/brief"
 
+	"github.com/Masterminds/sprig"
 	"github.com/google/shlex"
 	"github.com/sirupsen/logrus"
 )
 
 // Dictionary is used to lookup elements within a hierarchy
-type Dictionary map[string]*brief.Node
+type Dictionary struct {
+	Map  map[string]*brief.Node
+	List []*brief.Node
+}
+
+func NewDictionary() *Dictionary {
+	return &Dictionary{
+		Map:  make(map[string]*brief.Node),
+		List: make([]*brief.Node, 0),
+	}
+}
+
+func (dict *Dictionary) Add(node *brief.Node) {
+	dict.Map[node.Name] = node
+	dict.List = append(dict.List, node)
+}
 
 // Agenda contains steps to perform
 type Agenda struct {
-	Templates map[string]*brief.Node
-	Actions   map[string]*brief.Node
+	Templates *Dictionary
+	Actions   *Dictionary
 }
 
 // NewAgenda ctor
 func NewAgenda() *Agenda {
 	return &Agenda{
-		Templates: make(map[string]*brief.Node),
-		Actions:   make(map[string]*brief.Node),
+		Templates: NewDictionary(),
+		Actions:   NewDictionary(),
 	}
 }
 
 // AddTemplate add template to an agenda
 func (a *Agenda) AddTemplate(node *brief.Node) {
-	a.Templates[node.Name] = node
+	a.Templates.Add(node)
 }
 
 // AddAction add action to an agenda
 func (a *Agenda) AddAction(node *brief.Node) {
-	a.Actions[node.Name] = node
+	a.Actions.Add(node)
 }
 
 // Catalog of agenda for elements in the spac
@@ -59,20 +75,19 @@ func (cat Catalog) Add(elem string) *Agenda {
 type Generator struct {
 	Catalog  Catalog
 	Template *template.Template
+	Render   bool
 }
 
 // New Generator ctor
-func New() *Generator {
+func (cmd *Command) New() *Generator {
 	return &Generator{
 		Catalog:  Catalog{},
-		Template: template.New(""),
+		Template: template.New("").Funcs(sprig.GenericFuncMap()),
+		Render:   cmd.Render,
 	}
 }
 
-func (gtor *Generator) compile(gen *brief.Node, files *FileSet) error {
-	if files.Err != nil {
-		return files.Err // stops recursive generator files
-	}
+func (gtor *Generator) compile(gen *brief.Node) error {
 	templates := gen.Child("templates")
 	if templates != nil {
 		for _, tmpl := range templates.Body {
@@ -96,6 +111,15 @@ func (gtor *Generator) compile(gen *brief.Node, files *FileSet) error {
 		}
 	}
 	return nil
+}
+
+// LoadGenerator if the genfile exists
+func (gtor *Generator) LoadGenerator(genfile string) error {
+	node, err := ReadNode(genfile)
+	if err != nil {
+		return err
+	}
+	return gtor.compile(node)
 }
 
 // LoadGlobTemplates loads templates from the fileglob into generator
@@ -147,7 +171,7 @@ func (gtor *Generator) ApplyTemplates(spec *brief.Node, dir string) error {
 	if !ok {
 		return nil
 	}
-	for _, action := range agenda.Templates {
+	for _, action := range agenda.Templates.List {
 		if err := gtor.GenFile(action, spec, dir); err != nil {
 			return err
 		}
@@ -157,11 +181,14 @@ func (gtor *Generator) ApplyTemplates(spec *brief.Node, dir string) error {
 
 // ApplyActions executes actions for this spec node
 func (gtor *Generator) ApplyActions(spec *brief.Node, dir string) error {
+	if gtor.Render {
+		return nil
+	}
 	agenda, ok := gtor.Catalog[spec.Type]
 	if !ok {
 		return nil
 	}
-	for _, action := range agenda.Actions {
+	for _, action := range agenda.Actions.List {
 		if err := gtor.ExecAction(action, spec, dir); err != nil {
 			return err
 		}

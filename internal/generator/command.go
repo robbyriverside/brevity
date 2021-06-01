@@ -27,6 +27,7 @@ type Command struct {
 		Destination string `positional-arg-name:"destination" description:"where to put the project root folder"`
 	} `positional-args:"true" required:"true"`
 	Library string `short:"l" long:"lib" description:"Brevity library location" env:"BREVITY_LIB"`
+	Render  bool   `short:"r" long:"render" description:"Render files without actions"`
 }
 
 // Execute the project command
@@ -100,19 +101,31 @@ func (cmd *Command) Generate(brevity *brief.Node) error {
 func (cmd *Command) CompileSection(section *brief.Node) (*Generator, error) {
 	genfile := filepath.Join(cmd.Library, section.Type, "generator.brief")
 
-	gtor := New()
+	gtor := cmd.New()
 
-	node, err := ReadNode(genfile)
-	if err != nil {
+	if err := gtor.LoadGenerator(genfile); err != nil {
 		return nil, err
 	}
-	files := NewFileSet()
-	if err := gtor.compile(node, files.Add(genfile)); err != nil {
-		return nil, err
+
+	if section.Name != "" {
+		subgenfile := filepath.Join(cmd.Library, section.Type, fmt.Sprintf("%s.brief", section.Name))
+		if _, err := os.Stat(subgenfile); !os.IsNotExist(err) {
+			if err := gtor.LoadGenerator(subgenfile); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if len(gtor.Catalog) == 0 {
+		return nil, fmt.Errorf("empty generator catalog")
 	}
 
 	if err := gtor.LoadSectionTemplates(section, cmd.Library); err != nil {
 		return nil, err
+	}
+
+	if gtor.Template.DefinedTemplates() == "" {
+		return nil, fmt.Errorf("no templates found: section %s:%s", section.Type, section.Name)
 	}
 	return gtor, nil
 }
