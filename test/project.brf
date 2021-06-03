@@ -1,2 +1,0 @@
-project:first host:github.com account:robbyriverside gen:golang.brf
-    include `cli.brf`

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/robbyriverside/brevity/internal/brevity"
 	"github.com/robbyriverside/brief"
 )
 
@@ -12,6 +13,10 @@ import (
 func ExecuteMacro(tmpl *template.Template, section *brief.Node) ([]*brief.Node, error) {
 	var out strings.Builder
 	tmpl.Execute(&out, section)
+	if brevity.Options.Debug {
+		fmt.Println("macro:\n", string(section.Encode()))
+		fmt.Println("expansion:\n", out.String())
+	}
 	in := strings.NewReader(out.String())
 	dec := brief.NewDecoder(in, 4)
 	dec.Padding = section.Parent.Indent
@@ -84,15 +89,18 @@ func (cmd *Command) ExpandSectionMacros(project *brief.Node) error {
 		for _, section := range current {
 			gtor := cmd.New()
 
-			if err := gtor.LoadSectionTemplates(section, cmd.Library); err != nil {
+			if err := gtor.LoadSectionTemplates(section); err != nil {
 				return err
 			}
-			macroName := fmt.Sprintf("%%macro.%s%%", section.Type)
+			macroName := fmt.Sprintf("@macro.%s", section.Type)
 			tmpl := gtor.Template.Lookup(macroName)
 			if tmpl != nil {
 				nodes, err := ExecuteMacro(tmpl, section)
 				if err != nil {
 					return err
+				}
+				for _, n := range nodes {
+					n.Parent = section.Parent
 				}
 				expanded = append(expanded, nodes...)
 				continue

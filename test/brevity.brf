@@ -1,3 +1,0 @@
-brevity // builds a bunch of projects each with their own generator
-    include `backend_project.brf`
-    include `flutter_project.brf`

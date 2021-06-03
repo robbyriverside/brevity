@@ -1,0 +1,7 @@
+{{define "@macro.mycli" -}}
+cli:"{{.Name}}"
+{{- range .Body}}
+    command:{{.Name}} short:"command {{.Name}}" 
+        desc `command {{.Name}} auto generated`
+{{- end}}
+{{- end}}

@@ -73,9 +73,10 @@ func (cat Catalog) Add(elem string) *Agenda {
 
 // Generator for code
 type Generator struct {
-	Catalog  Catalog
-	Template *template.Template
-	Render   bool
+	Catalog         Catalog
+	Template        *template.Template
+	Render          bool
+	LibDir, SpecDir string
 }
 
 // New Generator ctor
@@ -84,6 +85,8 @@ func (cmd *Command) New() *Generator {
 		Catalog:  Catalog{},
 		Template: template.New("").Funcs(sprig.GenericFuncMap()),
 		Render:   cmd.Render,
+		LibDir:   cmd.Library,
+		SpecDir:  cmd.specDir,
 	}
 }
 
@@ -140,16 +143,17 @@ func (gtor *Generator) loadLocalTemplates(node *brief.Node) error {
 	if !ok {
 		return nil
 	}
-	return gtor.LoadGlobTemplates(local)
+	filename := filepath.Join(gtor.SpecDir, local)
+	return gtor.LoadGlobTemplates(filename)
 }
 
 // LoadSectionTemplates load templates for a section
-func (gtor *Generator) LoadSectionTemplates(section *brief.Node, lib string) error {
-	if err := gtor.LoadGlobTemplates(filepath.Join(lib, section.Type, "templates", "*.tmpl")); err != nil {
+func (gtor *Generator) LoadSectionTemplates(section *brief.Node) error {
+	if err := gtor.LoadGlobTemplates(filepath.Join(gtor.LibDir, section.Type, "templates", "*.tmpl")); err != nil {
 		return err
 	}
 	if section.Name != "" {
-		if err := gtor.LoadGlobTemplates(filepath.Join(lib, section.Type, "templates", section.Name, "*.tmpl")); err != nil {
+		if err := gtor.LoadGlobTemplates(filepath.Join(gtor.LibDir, section.Type, "templates", section.Name, "*.tmpl")); err != nil {
 			return err
 		}
 	}

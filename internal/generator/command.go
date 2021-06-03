@@ -28,10 +28,16 @@ type Command struct {
 	} `positional-args:"true" required:"true"`
 	Library string `short:"l" long:"lib" description:"Brevity library location" env:"BREVITY_LIB"`
 	Render  bool   `short:"r" long:"render" description:"Render files without actions"`
+	specDir string
 }
 
 // Execute the project command
 func (cmd *Command) Execute(args []string) error {
+	specfile, err := filepath.Abs(cmd.Args.SpecFile)
+	if err != nil {
+		return err
+	}
+	cmd.specDir = filepath.Dir(specfile)
 	node, err := cmd.ReadSpec()
 	if err != nil {
 		return err
@@ -120,7 +126,7 @@ func (cmd *Command) CompileSection(section *brief.Node) (*Generator, error) {
 		return nil, fmt.Errorf("empty generator catalog")
 	}
 
-	if err := gtor.LoadSectionTemplates(section, cmd.Library); err != nil {
+	if err := gtor.LoadSectionTemplates(section); err != nil {
 		return nil, err
 	}
 
