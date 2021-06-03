@@ -1,7 +1,9 @@
 {{define "@macro.mycli" -}}
 cli:"{{.Name}}"
+    commands
 {{- range .Body}}
-    command:{{.Name}} short:"command {{.Name}}" 
-        desc `command {{.Name}} auto generated`
+        command:{{.Name}} short:"command {{.Name}}" 
+            desc `command {{.Name}} auto generated`
 {{- end}}
+    options
 {{- end}}

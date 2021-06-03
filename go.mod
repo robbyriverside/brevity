@@ -12,7 +12,7 @@ require (
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/mitchellh/copystructure v1.2.0 // indirect
-	github.com/robbyriverside/brief v1.0.0
+	github.com/robbyriverside/brief v1.0.3
 	github.com/sirupsen/logrus v1.8.1
 	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a // indirect
 )
