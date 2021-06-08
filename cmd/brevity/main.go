@@ -21,6 +21,5 @@ func main() {
 		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
 			return
 		}
-		log.Fatal(err)
 	}
 }

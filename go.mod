@@ -2,6 +2,8 @@ module github.com/robbyriverside/brevity
 
 go 1.16
 
+replace github.com/robbyriverside/brief => ../brief
+
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect

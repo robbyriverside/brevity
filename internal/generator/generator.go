@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -38,6 +39,7 @@ func (dict *Dictionary) Add(node *brief.Node) {
 type Agenda struct {
 	Templates *Dictionary
 	Actions   *Dictionary
+	Found     bool
 }
 
 // NewAgenda ctor
@@ -83,7 +85,7 @@ type Generator struct {
 func (cmd *Command) New() *Generator {
 	return &Generator{
 		Catalog:  Catalog{},
-		Template: template.New("").Funcs(sprig.GenericFuncMap()),
+		Template: template.New("top").Funcs(sprig.GenericFuncMap()),
 		Render:   cmd.Render,
 		LibDir:   cmd.Library,
 		SpecDir:  cmd.specDir,
@@ -92,6 +94,9 @@ func (cmd *Command) New() *Generator {
 
 func (gtor *Generator) compile(gen *brief.Node) error {
 	templates := gen.Child("templates")
+	if templates == nil {
+		return fmt.Errorf("generator.brief missing templates node")
+	}
 	if templates != nil {
 		for _, tmpl := range templates.Body {
 			elem, ok := tmpl.Keys["element"]
@@ -103,6 +108,9 @@ func (gtor *Generator) compile(gen *brief.Node) error {
 		}
 	}
 	actions := gen.Child("actions")
+	if actions == nil {
+		return fmt.Errorf("generator.brief missing actions node")
+	}
 	if actions != nil {
 		for _, action := range actions.Body {
 			elem, ok := action.Keys["element"]
@@ -114,6 +122,34 @@ func (gtor *Generator) compile(gen *brief.Node) error {
 		}
 	}
 	return nil
+}
+
+// ValidateSection returns and error if any template elements are missing
+func (gtor *Generator) ValidateSection(section *brief.Node) error {
+	gtor.Catalog.validateNode(section)
+	missing := []string{}
+	for key, agenda := range gtor.Catalog {
+		if key == "project" {
+			continue
+		}
+		if !agenda.Found {
+			missing = append(missing, key)
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("invalid %s spec: missing elements %s", section.Type, missing)
+	}
+	return nil
+}
+
+func (cat Catalog) validateNode(node *brief.Node) {
+	agenda, found := cat[node.Type]
+	if found {
+		agenda.Found = found
+	}
+	for _, n := range node.Body {
+		cat.validateNode(n)
+	}
 }
 
 // LoadGenerator if the genfile exists
@@ -145,6 +181,22 @@ func (gtor *Generator) loadLocalTemplates(node *brief.Node) error {
 	}
 	filename := filepath.Join(gtor.SpecDir, local)
 	return gtor.LoadGlobTemplates(filename)
+}
+
+// SectionNames subdirs of the templates directory
+func (gtor *Generator) SectionNames(section *brief.Node) (map[string]bool, error) {
+	tdir := filepath.Join(gtor.LibDir, section.Type, "templates")
+	files, err := ioutil.ReadDir(tdir)
+	if err != nil {
+		return nil, err
+	}
+	result := map[string]bool{}
+	for _, info := range files {
+		if info.IsDir() {
+			result[info.Name()] = true
+		}
+	}
+	return result, nil
 }
 
 // LoadSectionTemplates load templates for a section
@@ -222,7 +274,7 @@ func ExecValueTemplate(value string, node *brief.Node) (string, error) {
 	if !strings.Contains(value, "{{") {
 		return value, nil
 	}
-	filetmpl, err := template.New("value").Parse(value)
+	filetmpl, err := template.New("value").Funcs(sprig.GenericFuncMap()).Parse(value)
 	if err != nil {
 		return "", err
 	}

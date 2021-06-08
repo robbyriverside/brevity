@@ -74,7 +74,7 @@ func (cmd *Command) ReadSpec() (*brief.Node, error) {
 		return nil, err
 	}
 	if spec.Type != "brevity" {
-		return nil, fmt.Errorf("invalid brevity spec")
+		return nil, fmt.Errorf("invalid brevity spec: top-level brevity")
 	}
 	for _, project := range spec.Body {
 		if project.Type != "project" {
@@ -96,6 +96,12 @@ func (cmd *Command) Generate(brevity *brief.Node) error {
 	}
 	// Generate code for each project
 	for _, project := range brevity.Body {
+		if project.Type != "project" {
+			return fmt.Errorf("invalid brevity spec: project not found")
+		}
+		if len(project.Name) == 0 {
+			return fmt.Errorf("invalid brevity spec: project must be named")
+		}
 		if err := cmd.Project(project); err != nil {
 			return err
 		}
@@ -108,12 +114,31 @@ func (cmd *Command) CompileSection(section *brief.Node) (*Generator, error) {
 	genfile := filepath.Join(cmd.Library, section.Type, "generator.brief")
 
 	gtor := cmd.New()
+	names, err := gtor.SectionNames(section)
+	if err != nil {
+		return nil, err
+	}
+
+	variation := len(names) > 0
+	if variation {
+		_, ok := names[section.Name]
+		if !ok {
+			keys := []string{}
+			for key := range names {
+				keys = append(keys, key)
+			}
+			return nil, fmt.Errorf("section %s name must be one of: %s", section.Type, keys)
+		}
+		brevity.Debug("compile section", section.Type, "named", section.Name, "from", genfile)
+	} else {
+		brevity.Debug("compile section", section.Type, "no name from:", genfile)
+	}
 
 	if err := gtor.LoadGenerator(genfile); err != nil {
 		return nil, err
 	}
 
-	if section.Name != "" {
+	if variation {
 		subgenfile := filepath.Join(cmd.Library, section.Type, fmt.Sprintf("%s.brief", section.Name))
 		if _, err := os.Stat(subgenfile); !os.IsNotExist(err) {
 			if err := gtor.LoadGenerator(subgenfile); err != nil {
@@ -121,11 +146,11 @@ func (cmd *Command) CompileSection(section *brief.Node) (*Generator, error) {
 			}
 		}
 	}
-
 	if len(gtor.Catalog) == 0 {
 		return nil, fmt.Errorf("empty generator catalog")
 	}
 
+	brevity.Debug("section catalog size", len(gtor.Catalog))
 	if err := gtor.LoadSectionTemplates(section); err != nil {
 		return nil, err
 	}
@@ -133,6 +158,7 @@ func (cmd *Command) CompileSection(section *brief.Node) (*Generator, error) {
 	if gtor.Template.DefinedTemplates() == "" {
 		return nil, fmt.Errorf("no templates found: section %s:%s", section.Type, section.Name)
 	}
+	brevity.Debug("section templates", gtor.Template.DefinedTemplates())
 	return gtor, nil
 }
 
@@ -151,7 +177,7 @@ func (cmd *Command) Project(project *brief.Node) error {
 	if err := os.Chdir(dir); err != nil {
 		return err
 	}
-	if err := cmd.ExpandSectionMacros(project); err != nil {
+	if err := cmd.ExpandProjectMacros(project); err != nil {
 		return err
 	}
 	for _, section := range project.Body {
@@ -160,6 +186,9 @@ func (cmd *Command) Project(project *brief.Node) error {
 			return err
 		}
 
+		if err := gtor.ValidateSection(section); err != nil {
+			return err
+		}
 		if err := gtor.ApplyTemplates(project, dir); err != nil {
 			return err
 		}

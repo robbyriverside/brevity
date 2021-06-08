@@ -1,5 +1,3 @@
 brevity
-    project:sample2 hub:"github.com" account:example templates:"macros.tmpl"
+    project:sample1 hub:"github.com" account:example templates:"macros.tmpl"
         mycli:"go-flags"
-            command:one
-            command:two

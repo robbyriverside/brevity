@@ -14,8 +14,8 @@ func ExecuteMacro(tmpl *template.Template, section *brief.Node) ([]*brief.Node, 
 	var out strings.Builder
 	tmpl.Execute(&out, section)
 	if brevity.Options.Debug {
-		fmt.Println("macro:\n", string(section.Encode()))
-		fmt.Println("expansion:\n", out.String())
+		fmt.Println("*** macro:\n", string(section.Encode()))
+		fmt.Println("*** expansion:\n", out.String())
 	}
 	in := strings.NewReader(out.String())
 	dec := brief.NewDecoder(in, 4)
@@ -80,8 +80,8 @@ func MergeNodes(body []*brief.Node, useNames bool) []*brief.Node {
 	return result
 }
 
-// ExpandSectionMacros loops over project sections until all macros are expanded
-func (cmd *Command) ExpandSectionMacros(project *brief.Node) error {
+// ExpandProjectMacros loops over project sections until all macros are expanded
+func (cmd *Command) ExpandProjectMacros(project *brief.Node) error {
 	current := project.Body
 	body := make([]*brief.Node, 0)
 	expanded := make([]*brief.Node, 0)
