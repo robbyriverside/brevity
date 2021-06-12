@@ -57,7 +57,14 @@ func AddCommand(parser *flags.Parser) error {
 
 // ReadNode reads a single node from a brief file
 func ReadNode(specfile string) (*brief.Node, error) {
-	nodes, err := brief.DecodeFile(specfile)
+	file, err := os.Open(specfile)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	dec := brief.NewDecoder(file, 4, filepath.Dir(specfile))
+	dec.Debug = brevity.Options.Debug
+	nodes, err := dec.Decode()
 	if err != nil {
 		return nil, err
 	}
