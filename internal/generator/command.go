@@ -103,9 +103,6 @@ func (cmd *Command) Generate(brevity *brief.Node) error {
 	}
 	// Generate code for each project
 	for _, project := range brevity.Body {
-		if project.Type != "project" {
-			return fmt.Errorf("invalid brevity spec: project not found")
-		}
 		if len(project.Name) == 0 {
 			return fmt.Errorf("invalid brevity spec: project must be named")
 		}
@@ -116,7 +113,8 @@ func (cmd *Command) Generate(brevity *brief.Node) error {
 	return nil
 }
 
-// CompileSection generates nth project in the spec
+// CompileSection within a project
+// Gather
 func (cmd *Command) CompileSection(section *brief.Node) (*Generator, error) {
 	genfile := filepath.Join(cmd.Library, section.Type, "generator.brief")
 
@@ -138,7 +136,7 @@ func (cmd *Command) CompileSection(section *brief.Node) (*Generator, error) {
 		}
 		brevity.Debug("compile section", section.Type, "named", section.Name, "from", genfile)
 	} else {
-		brevity.Debug("compile section", section.Type, "no name from:", genfile)
+		brevity.Debug("compile section", section.Type, "unnamed from:", genfile)
 	}
 
 	if err := gtor.LoadGenerator(genfile); err != nil {

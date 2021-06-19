@@ -17,12 +17,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Dictionary is used to lookup elements within a hierarchy
+// Dictionary is used to index elements within a section
 type Dictionary struct {
 	Map  map[string]*brief.Node
 	List []*brief.Node
 }
 
+// NewDictionary construct empty dictionary
 func NewDictionary() *Dictionary {
 	return &Dictionary{
 		Map:  make(map[string]*brief.Node),
@@ -30,8 +31,11 @@ func NewDictionary() *Dictionary {
 	}
 }
 
+// Add node to a dictionary
 func (dict *Dictionary) Add(node *brief.Node) {
-	dict.Map[node.Name] = node
+	if len(node.Name) > 0 {
+		dict.Map[node.Name] = node
+	}
 	dict.List = append(dict.List, node)
 }
 
@@ -42,7 +46,7 @@ type Agenda struct {
 	Found     bool
 }
 
-// NewAgenda ctor
+// NewAgenda constructor
 func NewAgenda() *Agenda {
 	return &Agenda{
 		Templates: NewDictionary(),
@@ -92,17 +96,49 @@ func (cmd *Command) New() *Generator {
 	}
 }
 
+// ValidateTemplate ensure correct template node
+func ValidateTemplate(tmpl *brief.Node, pos int) error {
+	if len(tmpl.Name) == 0 {
+		return fmt.Errorf("template %d has no name", pos)
+	}
+	_, ok := tmpl.Keys["element"]
+	if !ok {
+		return fmt.Errorf("missing template:%q element keyword", tmpl.Name)
+	}
+	_, ok = tmpl.Keys["file"]
+	if !ok {
+		return fmt.Errorf("missing template:%q file keyword", tmpl.Name)
+	}
+	return nil
+}
+
+// ValidateAction ensure correct action node
+func ValidateAction(act *brief.Node, pos int) error {
+	if len(act.Name) == 0 {
+		return fmt.Errorf("action %d has no name", pos)
+	}
+	_, ok := act.Keys["element"]
+	if !ok {
+		return fmt.Errorf("missing action:%q element keyword", act.Name)
+	}
+	_, ok = act.Keys["exec"]
+	if !ok {
+		return fmt.Errorf("missing action:%q exec keyword", act.Name)
+	}
+	return nil
+}
+
 func (gtor *Generator) compile(gen *brief.Node) error {
 	templates := gen.Child("templates")
 	if templates == nil {
 		return fmt.Errorf("generator.brief missing templates node")
 	}
 	if templates != nil {
-		for _, tmpl := range templates.Body {
-			elem, ok := tmpl.Keys["element"]
-			if !ok {
-				return fmt.Errorf("missing template:%q element keyword", tmpl.Name)
+		for i, tmpl := range templates.Body {
+			if err := ValidateTemplate(tmpl, i); err != nil {
+				return err
 			}
+			elem := tmpl.Keys["element"]
 			agenda := gtor.Catalog.Add(elem)
 			agenda.AddTemplate(tmpl)
 		}
@@ -112,11 +148,11 @@ func (gtor *Generator) compile(gen *brief.Node) error {
 		return fmt.Errorf("generator.brief missing actions node")
 	}
 	if actions != nil {
-		for _, action := range actions.Body {
-			elem, ok := action.Keys["element"]
-			if !ok {
-				return fmt.Errorf("missing action:%q element keyword", action.Name)
+		for i, action := range actions.Body {
+			if err := ValidateAction(action, i); err != nil {
+				return err
 			}
+			elem := action.Keys["element"]
 			agenda := gtor.Catalog.Add(elem)
 			agenda.AddAction(action)
 		}
@@ -237,11 +273,16 @@ func (gtor *Generator) ApplyTemplates(spec *brief.Node, dir string) error {
 
 // ApplyActions executes actions for this spec node
 func (gtor *Generator) ApplyActions(spec *brief.Node, dir string) error {
-	if gtor.Render {
-		return nil
-	}
 	agenda, ok := gtor.Catalog[spec.Type]
 	if !ok {
+		return nil
+	}
+	if gtor.Render {
+		if brevity.Options.Debug {
+			for _, action := range agenda.Actions.List {
+				fmt.Printf("*** action:%q element:%q exec:%q\n", action.Name, action.Keys["element"], action.Keys["exec"])
+			}
+		}
 		return nil
 	}
 	for _, action := range agenda.Actions.List {
