@@ -6,7 +6,7 @@ Brevity generates project code files and executes init commands to define an app
 
 The contents of files are defined using Go text-templates.  The generated files are allowed to be any format, even script files that can be later executed as an init command.  Further, Brevity is a meta-generator because it can generate template files or even [brief](https://github.com/robbyriverside/brief) files which can then be used for code generation.
 
-The Brief Node methods contain many helpful routines when defining a template ([see Brief](https://github.com/robbyriverside/brief/blob/main/README.md)).  But Brevity also provides the functions found in the [Sprig Library](https://masterminds.github.io/sprig/).
+The [Brief Node](https://github.com/robbyriverside/brief/blob/main/README.md) methods contain many helpful routines when defining a template.  But Brevity also provides the functions found in the [Sprig Library](https://masterminds.github.io/sprig/).
 
 ## brevity command
 
