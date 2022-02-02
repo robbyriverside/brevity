@@ -33,6 +33,7 @@ type Command struct {
 
 // Execute the project command
 func (cmd *Command) Execute(args []string) error {
+	gtor, err := cmd.CompileLibrary()
 	specfile, err := filepath.Abs(cmd.Args.SpecFile)
 	if err != nil {
 		return err
@@ -42,7 +43,7 @@ func (cmd *Command) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	return cmd.Generate(node)
+	return gtor.Generate(node)
 }
 
 // AddCommand to the parser
@@ -91,13 +92,32 @@ func (cmd *Command) ReadSpec() (*brief.Node, error) {
 	return spec, nil
 }
 
-// Generate brevity projects into a destination folder
-func (cmd *Command) Generate(brevity *brief.Node) error {
-	path, err := filepath.Abs(cmd.Args.Destination)
-	if err != nil {
-		return fmt.Errorf("expanding destination %s failed: %s", cmd.Args.Destination, err)
+// CompileLibrary for this command
+func (cmd *Command) CompileLibrary() (*Generator, error) {
+	libfile := filepath.Join(cmd.Library, "sections.brief")
+	if _, err := os.Stat(libfile); os.IsNotExist(err) {
+		return nil, fmt.Errorf("library file: %s error: %s", libfile, err)
 	}
-	cmd.Args.Destination = path
+	gtor := cmd.New()
+
+	libnode, err := ReadNode(libfile)
+	if err != nil {
+		return nil, fmt.Errorf("failed reading lib node: %s", err)
+	}
+	for _, node := range libnode.Body {
+		section := NewSection(node.Name, node)
+		gtor.AddSection(section)
+	}
+	return gtor, nil
+}
+
+// Generate brevity projects into a destination folder
+func (gtor *Generator) Generate(brevity *brief.Node) error {
+	path, err := filepath.Abs(gtor.Destination)
+	if err != nil {
+		return fmt.Errorf("expanding destination %s failed: %s", gtor.Destination, err)
+	}
+	gtor.Destination = path
 	if err := ValidateFolder(path); err != nil {
 		return err
 	}
@@ -106,73 +126,37 @@ func (cmd *Command) Generate(brevity *brief.Node) error {
 		if len(project.Name) == 0 {
 			return fmt.Errorf("invalid brevity spec: project must be named")
 		}
-		if err := cmd.Project(project); err != nil {
+		if err := gtor.Project(project); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// CompileSection within a project
-// Gather
-func (cmd *Command) CompileSection(section *brief.Node) (*Generator, error) {
-	genfile := filepath.Join(cmd.Library, section.Type, "generator.brief")
-
-	gtor := cmd.New()
-	names, err := gtor.SectionNames(section)
-	if err != nil {
-		return nil, err
-	}
-
-	variation := len(names) > 0
-	if variation {
-		_, ok := names[section.Name]
-		if !ok {
-			keys := []string{}
-			for key := range names {
-				keys = append(keys, key)
-			}
-			return nil, fmt.Errorf("section %s name must be one of: %s", section.Type, keys)
-		}
-		brevity.Debug("compile section", section.Type, "named", section.Name, "from", genfile)
-	} else {
-		brevity.Debug("compile section", section.Type, "unnamed from:", genfile)
-	}
-
-	if err := gtor.LoadGenerator(genfile); err != nil {
-		return nil, err
-	}
-
-	if variation {
-		subgenfile := filepath.Join(cmd.Library, section.Type, fmt.Sprintf("%s.brief", section.Name))
-		if _, err := os.Stat(subgenfile); !os.IsNotExist(err) {
-			if err := gtor.LoadGenerator(subgenfile); err != nil {
-				return nil, err
-			}
-		}
-	}
+// CompileSection found in brevity project
+func (gtor *Generator) CompileSection(section *brief.Node) error {
 	if len(gtor.Catalog) == 0 {
-		return nil, fmt.Errorf("empty generator catalog")
+		return fmt.Errorf("empty generator catalog")
 	}
 
 	brevity.Debug("section catalog size", len(gtor.Catalog))
 	if err := gtor.LoadSectionTemplates(section); err != nil {
-		return nil, err
+		return err
 	}
 
 	if gtor.Template.DefinedTemplates() == "" {
-		return nil, fmt.Errorf("no templates found: section %s:%s", section.Type, section.Name)
+		return fmt.Errorf("no templates found: section %s:%s", section.Type, section.Name)
 	}
 	brevity.Debug("section templates", gtor.Template.DefinedTemplates())
-	return gtor, nil
+	return nil
 }
 
 // Project generates nth project in the spec
-func (cmd *Command) Project(project *brief.Node) error {
+func (gtor *Generator) Project(project *brief.Node) error {
 	if project.Name == "" {
 		return fmt.Errorf("project name is required")
 	}
-	dir := filepath.Join(cmd.Args.Destination, project.Name)
+	dir := filepath.Join(gtor.Destination, project.Name)
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		return err
 	}
@@ -182,18 +166,19 @@ func (cmd *Command) Project(project *brief.Node) error {
 	if err := os.Chdir(dir); err != nil {
 		return err
 	}
-	if err := cmd.ExpandProjectMacros(project); err != nil {
-		return err
-	}
 	for _, section := range project.Body {
-		gtor, err := cmd.CompileSection(section)
+		err := gtor.CompileSection(section)
 		if err != nil {
 			return err
 		}
-
 		if err := gtor.ValidateSection(section); err != nil {
 			return err
 		}
+	}
+	if err := gtor.ExpandProjectMacros(project); err != nil {
+		return err
+	}
+	for _, section := range project.Body {
 		if err := gtor.ApplyTemplates(project, dir); err != nil {
 			return err
 		}

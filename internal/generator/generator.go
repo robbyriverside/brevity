@@ -43,14 +43,16 @@ func (dict *Dictionary) Add(node *brief.Node) {
 type Agenda struct {
 	Templates *Dictionary
 	Actions   *Dictionary
+	Section   *Section
 	Found     bool
 }
 
 // NewAgenda constructor
-func NewAgenda() *Agenda {
+func NewAgenda(section *Section) *Agenda {
 	return &Agenda{
 		Templates: NewDictionary(),
 		Actions:   NewDictionary(),
+		Section:   section,
 	}
 }
 
@@ -67,33 +69,31 @@ func (a *Agenda) AddAction(node *brief.Node) {
 // Catalog of agenda for elements in the spac
 type Catalog map[string]*Agenda
 
-// Add the agenda for an element
-func (cat Catalog) Add(elem string) *Agenda {
-	agenda, ok := cat[elem]
-	if !ok {
-		agenda = NewAgenda()
-		cat[elem] = agenda
-	}
-	return agenda
-}
-
 // Generator for code
 type Generator struct {
 	Catalog         Catalog
 	Template        *template.Template
 	Render          bool
 	LibDir, SpecDir string
+	Destination     string
 }
 
 // New Generator ctor
 func (cmd *Command) New() *Generator {
 	return &Generator{
-		Catalog:  Catalog{},
-		Template: template.New("top").Funcs(sprig.GenericFuncMap()),
-		Render:   cmd.Render,
-		LibDir:   cmd.Library,
-		SpecDir:  cmd.specDir,
+		Catalog:     Catalog{},
+		Template:    template.New("top").Funcs(sprig.GenericFuncMap()),
+		Render:      cmd.Render,
+		LibDir:      cmd.Library,
+		SpecDir:     cmd.specDir,
+		Destination: cmd.Args.Destination,
 	}
+}
+
+func (gtor *Generator) AddSection(section *Section) error {
+	agenda := NewAgenda(section)
+	gtor.Catalog[section.Name] = agenda
+	return gtor.compile(section.Node)
 }
 
 // ValidateTemplate ensure correct template node
@@ -133,29 +133,37 @@ func (gtor *Generator) compile(gen *brief.Node) error {
 	if templates == nil {
 		return fmt.Errorf("generator.brief missing templates node")
 	}
-	if templates != nil {
-		for i, tmpl := range templates.Body {
-			if err := ValidateTemplate(tmpl, i); err != nil {
-				return err
-			}
-			elem := tmpl.Keys["element"]
-			agenda := gtor.Catalog.Add(elem)
-			agenda.AddTemplate(tmpl)
+	for i, tmpl := range templates.Body {
+		if err := ValidateTemplate(tmpl, i); err != nil {
+			return err
 		}
+		elem, ok := tmpl.Keys["element"]
+		if !ok {
+			return fmt.Errorf("element field not found for template: %s", tmpl.Name)
+		}
+		agenda, ok := gtor.Catalog[elem]
+		if !ok {
+			return fmt.Errorf("Unknown template element %q not found", elem)
+		}
+		agenda.AddTemplate(tmpl)
 	}
 	actions := gen.Child("actions")
 	if actions == nil {
 		return fmt.Errorf("generator.brief missing actions node")
 	}
-	if actions != nil {
-		for i, action := range actions.Body {
-			if err := ValidateAction(action, i); err != nil {
-				return err
-			}
-			elem := action.Keys["element"]
-			agenda := gtor.Catalog.Add(elem)
-			agenda.AddAction(action)
+	for i, action := range actions.Body {
+		if err := ValidateAction(action, i); err != nil {
+			return err
 		}
+		elem, ok := action.Keys["element"]
+		if !ok {
+			return fmt.Errorf("element field not found for action: %s", action.Name)
+		}
+		agenda, ok := gtor.Catalog[elem]
+		if !ok {
+			return fmt.Errorf("Unknown action element %q not found", elem)
+		}
+		agenda.AddAction(action)
 	}
 	return nil
 }
@@ -237,6 +245,15 @@ func (gtor *Generator) SectionNames(section *brief.Node) (map[string]bool, error
 
 // LoadSectionTemplates load templates for a section
 func (gtor *Generator) LoadSectionTemplates(section *brief.Node) error {
+	agenda, ok := gtor.Catalog[section.Type]
+	if !ok {
+		return fmt.Errorf("section %s not found when loading templates", section.Type)
+	}
+	return agenda.Section.Compile(section.Name, gtor.Template)
+}
+
+// LoadSectionTemplateFiles load templates for a section from files
+func (gtor *Generator) LoadSectionTemplateFiles(section *brief.Node) error {
 	if err := gtor.LoadGlobTemplates(filepath.Join(gtor.LibDir, section.Type, "templates", "*.tmpl")); err != nil {
 		return err
 	}

@@ -81,17 +81,12 @@ func MergeNodes(body []*brief.Node, useNames bool) []*brief.Node {
 }
 
 // ExpandProjectMacros loops over project sections until all macros are expanded
-func (cmd *Command) ExpandProjectMacros(project *brief.Node) error {
+func (gtor *Generator) ExpandProjectMacros(project *brief.Node) error {
 	current := project.Body
 	body := make([]*brief.Node, 0)
 	expanded := make([]*brief.Node, 0)
 	for {
 		for _, section := range current {
-			gtor := cmd.New()
-
-			if err := gtor.LoadSectionTemplates(section); err != nil {
-				return err
-			}
 			macroName := fmt.Sprintf("@macro.%s", section.Type)
 			tmpl := gtor.Template.Lookup(macroName)
 			if tmpl != nil {
